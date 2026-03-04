@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snapchat Archive</title>
+  <link rel="stylesheet" href="./styles.css">
+  <link href="//vjs.zencdn.net/8.23.4/video-js.min.css" rel="stylesheet">
+  <script src="//vjs.zencdn.net/8.23.4/video.min.js"></script>
+  <style>
+    /* ── Inline media hover ─────────────────────────────────── */
+    .media-item { transition: transform 0.15s; }
+    .media-item:hover { transform: scale(1.02); }
+
+    /* ── .vjs-snapback — inline portrait skin ───────────────── */
+    .vjs-snapback {
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+      display: block;
+    }
+    /* Hide controls we don't want inline */
+    .vjs-snapback .vjs-play-control,
+    .vjs-snapback .vjs-progress-control,
+    .vjs-snapback .vjs-remaining-time,
+    .vjs-snapback .vjs-duration,
+    .vjs-snapback .vjs-fullscreen-control,
+    .vjs-snapback .vjs-picture-in-picture-control,
+    .vjs-snapback .vjs-playback-rate,
+    .vjs-snapback .vjs-subs-caps-button,
+    .vjs-snapback .vjs-chapters-button { display: none !important; }
+    /* Show current time */
+    .vjs-snapback .vjs-current-time { display: flex !important; padding-left: 6px; }
+    /* Gradient bar at the bottom, compact height */
+    .vjs-snapback .vjs-control-bar {
+      background: linear-gradient(to top, rgba(0,0,0,0.75), transparent);
+      height: 38px;
+      align-items: center;
+    }
+    .vjs-snapback .vjs-current-time-display { font-size: 13px; font-weight: 600; line-height: 38px; }
+    /* Big play button — circular, centered */
+    .vjs-snapback .vjs-big-play-button {
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 52px; height: 52px; line-height: 52px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.7);
+      background: rgba(0,0,0,0.45);
+      font-size: 18px;
+    }
+    .vjs-snapback .vjs-big-play-button .vjs-icon-placeholder::before { margin-left: 2px; }
+    .vjs-snapback:hover .vjs-big-play-button { background: rgba(0,0,0,0.65); }
+    /* Volume / mute panel */
+    .vjs-snapback .vjs-volume-panel { margin-left: auto; margin-right: 4px; }
+
+    /* ── Lightbox overlay ───────────────────────────────────── */
+    #lightbox {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.93);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #lightbox.open { display: flex; }
+    #lightbox-close {
+      position: absolute; top: 16px; right: 20px;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      color: #fff; font-size: 20px; line-height: 1;
+      width: 38px; height: 38px; border-radius: 50%;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    #lightbox-close:hover { background: rgba(255,255,255,0.18); }
+    #lightbox-counter {
+      position: absolute; top: 22px; left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,0.5); font-size: 13px; pointer-events: none;
+    }
+    /* Row: arrows flanking the media */
+    #lightbox-row { display: flex; align-items: center; gap: 16px; }
+    #lightbox-prev, #lightbox-next {
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      color: #fff; font-size: 26px; line-height: 1;
+      width: 46px; height: 64px; border-radius: 8px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    #lightbox-prev:hover, #lightbox-next:hover { background: rgba(255,255,255,0.18); }
+    #lightbox-media {
+      display: flex; align-items: center; justify-content: center;
+    }
+    #lightbox-media img {
+      width: auto; height: auto;
+      max-width: min(calc(100vw - 180px), 1000px);
+      max-height: 82vh;
+      border-radius: 12px; display: block;
+    }
+    /* .vjs-lightbox — site-matching dark theme, hover-reveal controls */
+    #lightbox-media .vjs-lightbox { border-radius: 12px; overflow: hidden; }
+    /* Control bar: site dark theme, hidden until hover/active */
+    #lightbox-media .vjs-lightbox .vjs-control-bar {
+      background: #1a1a1a;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      opacity: 0; transition: opacity 0.2s;
+    }
+    #lightbox-media .vjs-lightbox:hover .vjs-control-bar,
+    #lightbox-media .vjs-lightbox.vjs-user-active .vjs-control-bar,
+    #lightbox-media .vjs-lightbox.vjs-paused .vjs-control-bar { opacity: 1; }
+    /* Progress / volume: Snapchat yellow */
+    #lightbox-media .vjs-lightbox .vjs-play-progress,
+    #lightbox-media .vjs-lightbox .vjs-volume-level { background: #fffc00; }
+    #lightbox-media .vjs-lightbox .vjs-play-progress:before { color: #fffc00; }
+    /* Seek track and load bar */
+    #lightbox-media .vjs-lightbox .vjs-slider { background: rgba(255,255,255,0.2); }
+    #lightbox-media .vjs-lightbox .vjs-load-progress { background: rgba(255,255,255,0.15); }
+    /* Buttons and time text: white */
+    #lightbox-media .vjs-lightbox .vjs-button > .vjs-icon-placeholder:before,
+    #lightbox-media .vjs-lightbox .vjs-time-control { color: rgba(255,255,255,0.9); }
+
+    /* ── Voice note audio player ─────────────────────────────── */
+    .audio-player {
+      display: inline-flex;
+      align-items: center;
+      gap: 24px;
+      background: #2C2C2E;
+      border: 2px solid #3A3A3C;
+      border-radius: 12px;
+      padding: 20px 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.35);
+      user-select: none;
+      transform: scale(0.58);
+      transform-origin: left center;
+      margin-top: -18px;
+      margin-bottom: -18px;
+    }
+
+    .play-btn {
+      flex-shrink: 0;
+      width: 64px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      transition: opacity .15s;
+      align-self: center;
+      padding: 0;
+    }
+    .play-btn:hover    { opacity: .8; }
+    .play-btn:disabled { opacity: .35; cursor: default; }
+
+    .waveform-canvas { flex-shrink: 0; display: block; cursor: pointer; }
+
+    .speed-btn {
+      flex-shrink: 0;
+      background: #3A3A3C;
+      border: none;
+      border-radius: 8px;
+      width: 100px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background .15s;
+      align-self: center;
+    }
+    .speed-btn:hover    { background: #48484A; }
+    .speed-btn:disabled { opacity: .35; cursor: default; }
+    .speed-btn span {
+      font-size: 28px;
+      font-weight: 500;
+      color: #EBEBF5;
+      line-height: 1;
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    }
+
+    .time-display {
+      flex-shrink: 0;
+      font-size: 28px;
+      font-weight: 400;
+      color: #8E8E93;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      align-self: center;
+      min-width: 68px;
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    }
+  </style>
+</head>
+
+<body>
+  <svg aria-hidden="true" style="position: absolute; width: 0; height: 0; overflow: hidden;">
+    <symbol fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 17" id="video-sent">
+      <path d="M3.7121 13.3898L3.7141 13.3918M3.7661 13.4518L3.7671 13.4588M3.7061 2.93185L3.7041 2.93385M13.6071 7.63385L13.6271 7.64385L13.6451 7.65285C14.2291 7.90985 14.2501 8.15485 14.2501 8.16385C14.2501 8.17385 14.2291 8.41885 13.6451 8.67585L13.6261 8.68385L13.6081 8.69385L4.8381 13.1509C4.4141 13.3349 4.1021 13.4039 3.9001 13.4109C3.85465 13.4128 3.80911 13.4105 3.7641 13.4039C3.76558 13.3784 3.76859 13.353 3.7731 13.3279C3.8011 13.1579 3.9031 12.8858 4.1441 12.5138C4.5441 11.9988 4.9701 11.2858 5.3001 10.5388C5.6301 9.79285 5.9001 8.93285 5.9001 8.16385C5.9001 7.38085 5.6231 6.52085 5.2891 5.77585C4.97502 5.07592 4.58716 4.41149 4.1321 3.79385C3.8871 3.42785 3.7861 3.15985 3.7581 2.99485C3.75379 2.96972 3.75112 2.94433 3.7501 2.91885C3.79962 2.9104 3.84992 2.90738 3.9001 2.90985C4.1031 2.91585 4.4161 2.98285 4.8381 3.16685L13.6071 7.63385ZM3.7541 2.87085L3.7521 2.87785C3.7521 2.87285 3.7541 2.87085 3.7541 2.87085Z" stroke="#A05DCD" stroke-width="1.5" stroke-linejoin="round"></path>
+    </symbol>
+    <symbol fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 17" id="video-received">
+      <path d="M11.442 2.90991H4.558C3.55947 2.90991 2.75 3.71938 2.75 4.71791V11.6019C2.75 12.6004 3.55947 13.4099 4.558 13.4099H11.442C12.4405 13.4099 13.25 12.6004 13.25 11.6019V4.71791C13.25 3.71938 12.4405 2.90991 11.442 2.90991Z" stroke="#A05DCD" stroke-width="1.5"></path>
+    </symbol>
+    <symbol fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 17" id="snap-sent">
+      <path d="M3.7121 13.3898L3.7141 13.3918M3.7661 13.4518L3.7671 13.4588M3.7061 2.93185L3.7041 2.93385M13.6071 7.63385L13.6271 7.64385L13.6451 7.65285C14.2291 7.90985 14.2501 8.15485 14.2501 8.16385C14.2501 8.17385 14.2291 8.41885 13.6451 8.67585L13.6261 8.68385L13.6081 8.69385L4.8381 13.1509C4.4141 13.3349 4.1021 13.4039 3.9001 13.4109C3.85465 13.4128 3.80911 13.4105 3.7641 13.4039C3.76558 13.3784 3.76859 13.353 3.7731 13.3279C3.8011 13.1579 3.9031 12.8858 4.1441 12.5138C4.5441 11.9988 4.9701 11.2858 5.3001 10.5388C5.6301 9.79285 5.9001 8.93285 5.9001 8.16385C5.9001 7.38085 5.6231 6.52085 5.2891 5.77585C4.97502 5.07592 4.58716 4.41149 4.1321 3.79385C3.8871 3.42785 3.7861 3.15985 3.7581 2.99485C3.75379 2.96972 3.75112 2.94433 3.7501 2.91885C3.79962 2.9104 3.84992 2.90738 3.9001 2.90985C4.1031 2.91585 4.4161 2.98285 4.8381 3.16685L13.6071 7.63385ZM3.7541 2.87085L3.7521 2.87785C3.7521 2.87285 3.7541 2.87085 3.7541 2.87085Z" stroke="#F23C57" stroke-width="1.5" stroke-linejoin="round"></path>
+    </symbol>
+    <symbol fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 17" id="snap-received">
+      <path d="M11.442 2.90991H4.558C3.55947 2.90991 2.75 3.71938 2.75 4.71791V11.6019C2.75 12.6004 3.55947 13.4099 4.558 13.4099H11.442C12.4405 13.4099 13.25 12.6004 13.25 11.6019V4.71791C13.25 3.71938 12.4405 2.90991 11.442 2.90991Z" stroke="#F23C57" stroke-width="1.5"></path>
+    </symbol>
+    <symbol fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 17" id="chat-sent">
+      <path d="M3.7121 13.3898L3.7141 13.3918M3.7661 13.4518L3.7671 13.4588M3.7061 2.93185L3.7041 2.93385M13.6071 7.63385L13.6271 7.64385L13.6451 7.65285C14.2291 7.90985 14.2501 8.15485 14.2501 8.16385C14.2501 8.17385 14.2291 8.41885 13.6451 8.67585L13.6261 8.68385L13.6081 8.69385L4.8381 13.1509C4.4141 13.3349 4.1021 13.4039 3.9001 13.4109C3.85465 13.4128 3.80911 13.4105 3.7641 13.4039C3.76558 13.3784 3.76859 13.353 3.7731 13.3279C3.8011 13.1579 3.9031 12.8858 4.1441 12.5138C4.5441 11.9988 4.9701 11.2858 5.3001 10.5388C5.6301 9.79285 5.9001 8.93285 5.9001 8.16385C5.9001 7.38085 5.6231 6.52085 5.2891 5.77585C4.97502 5.07592 4.58716 4.41149 4.1321 3.79385C3.8871 3.42785 3.7861 3.15985 3.7581 2.99485C3.75379 2.96972 3.75112 2.94433 3.7501 2.91885C3.79962 2.9104 3.84992 2.90738 3.9001 2.90985C4.1031 2.91585 4.4161 2.98285 4.8381 3.16685L13.6071 7.63385ZM3.7541 2.87085L3.7521 2.87785C3.7521 2.87285 3.7541 2.87085 3.7541 2.87085Z" stroke="#0FADFF" stroke-width="1.5" stroke-linejoin="round"></path>
+    </symbol>
+    <symbol fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 17" id="chat-received">
+      <path d="M3 4.51291C3 3.21291 4.053 2.15991 5.353 2.15991H10.647C11.947 2.15991 13 3.21291 13 4.51291V14.3669C13 14.4607 12.9736 14.5526 12.9238 14.6322C12.874 14.7117 12.8029 14.7756 12.7185 14.8166C12.6341 14.8576 12.5399 14.874 12.4466 14.864C12.3533 14.8539 12.2648 14.8179 12.191 14.7599L9.202 12.4099C8.99452 12.2475 8.7385 12.1594 8.475 12.1599H5.353C4.72895 12.1599 4.13045 11.912 3.68918 11.4707C3.2479 11.0295 3 10.431 3 9.80691V4.51291Z" stroke="#0FADFF" stroke-width="1.5"></path>
+    </symbol>
+  </svg>
+  <div id="root">
+    <div class="h-screen flex flex-col bg-bg-primary overflow-hidden">
+      <div class="fixed top-0 left-0 right-0 z-[100] bg-bg-secondary border-b border-border px-5 py-3 min-h-[80px]">
+        <div class="absolute left-5 top-1/2 -translate-y-1/2"><button
+            class="px-4 py-2 bg-bg-tertiary border border-border rounded text-text-primary text-sm font-medium flex items-center gap-2 transition-all hover:bg-hover-bg hover:border-accent hover:-translate-y-px"
+            aria-label="Return to Dashboard"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
+              </path>
+            </svg>Dashboard</button></div>
+        <div class="flex items-center justify-center gap-5"><button
+            class="px-4 py-2 bg-bg-tertiary border border-border rounded text-text-primary text-sm font-medium flex items-center gap-1.5 transition-all cursor-pointer hover:bg-hover-bg hover:border-accent hover:-translate-y-px"
+            aria-label="Previous day">← Previous Day</button>
+          <div class="text-center">
+            <h1 class="text-xl text-accent m-0 font-semibold cursor-pointer hover:underline transition-all"
+              role="button" tabindex="0" aria-label="Open date picker" id="header-date"></h1>
+            <div class="text-xs text-text-secondary mt-1"><span id="header-conversations"></span><span
+                class="mx-2">•</span><span id="header-messages"></span><span class="mx-2">•</span><span id="header-media"></span></div>
+          </div><button
+            class="px-4 py-2 bg-bg-tertiary border border-border rounded text-text-primary text-sm font-medium flex items-center gap-1.5 transition-all cursor-pointer hover:bg-hover-bg hover:border-accent hover:-translate-y-px"
+            aria-label="Next day">Next Day →</button>
+        </div>
+      </div>
+      <div class="flex flex-1 overflow-hidden pt-[80px]">
+        <div class="w-[350px] bg-bg-secondary border-r border-border flex flex-col overflow-hidden">
+          <div class="flex-1 overflow-y-auto py-2 sidebar-scrollbar">
+            
+            <div id="conversation-list"></div>
+
+          </div>
+        </div>
+        <div id="right-panel" class="flex-1 flex flex-col bg-bg-primary relative overflow-hidden">
+          <div id="no-selection" class="flex-1 flex items-center justify-center flex-col text-text-tertiary">
+            <div class="text-6xl mb-4 opacity-50">💬</div>
+            <div class="text-lg font-medium">Select a conversation to view</div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="fixed bottom-5 right-5 bg-bg-secondary px-4 py-3 rounded-lg border border-border text-xs text-text-secondary transition-opacity pointer-events-none opacity-0">
+        <strong>Keyboard shortcuts:</strong> ESC = Close, ↑↓ = Navigate, ←→ = Media Navigation</div>
+    </div>
+  </div>
+  <div id="lightbox" role="dialog" aria-modal="true" aria-label="Media viewer">
+    <button id="lightbox-close" aria-label="Close">✕</button>
+    <div id="lightbox-counter"></div>
+    <div id="lightbox-row">
+      <button id="lightbox-prev" aria-label="Previous media">‹</button>
+      <div id="lightbox-media">
+        <img id="lightbox-img" style="display:none;" alt="Media">
+        <div id="lightbox-vid-wrap"></div>
+      </div>
+      <button id="lightbox-next" aria-label="Next media">›</button>
+    </div>
+  </div>
+  
+  <script type="module" src="./js/main.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,19 @@
+# Personal data — never commit
+input/
+output/
+
+# Temp dirs
+_tmp_extract/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# OS
+.DS_Store
+
+# Editor / tooling
+.claude
+.venv/
+venv/
+CLAUDE.md

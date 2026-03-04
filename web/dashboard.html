@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snapchat Archive Dashboard</title>
+  <style>
+    /* ── Variables ── */
+    :root {
+      --bg-primary:    #000000;
+      --bg-secondary:  #1a1a1a;
+      --bg-tertiary:   #2a2a2a;
+      --text-primary:  #ffffff;
+      --text-secondary:#b4b4b4;
+      --text-tertiary: #808080;
+      --accent:        #fffc00;
+      --border:        #333333;
+    }
+
+    /* ── Reset ── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+                   Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar            { width: 8px; }
+    ::-webkit-scrollbar-track      { background: var(--bg-secondary); }
+    ::-webkit-scrollbar-thumb      { background: var(--border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover{ background: var(--text-tertiary); }
+
+    /* ── Header ── */
+    .header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 24px 32px;
+    }
+    .header-inner { max-width: 1280px; margin: 0 auto; }
+    .header h1   { font-size: 1.875rem; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+    .header p    { color: var(--text-secondary); font-size: 0.875rem; }
+
+    /* ── Main ── */
+    .main { max-width: 1280px; margin: 0 auto; padding: 32px; }
+
+    /* ── Stats Grid ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    @media (min-width: 768px)  { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 1024px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+
+    .stat-card {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 24px;
+      border: 1px solid var(--border);
+      transition: border-color 0.15s ease;
+    }
+    .stat-card:hover { border-color: var(--accent); }
+
+    .stat-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .stat-label    { font-size: 0.75rem; color: var(--text-tertiary); letter-spacing: 0.05em; }
+    .stat-number   { font-size: 1.875rem; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+    .stat-subtitle { font-size: 0.875rem; color: var(--text-secondary); }
+
+    .icon { color: var(--accent); flex-shrink: 0; display: block; }
+
+    /* ── Most Active Day ── */
+    .active-day-card {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      padding: 24px;
+      border: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+    .active-day-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .active-day-card-header h2 { font-size: 1.25rem; font-weight: 600; color: var(--text-primary); }
+    .active-day-body {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .active-day-date  { font-size: 1.125rem; color: var(--text-primary); margin-bottom: 4px; }
+    .active-day-count { font-size: 0.875rem; color: var(--text-secondary); }
+
+    .btn-accent {
+      padding: 8px 16px;
+      background: var(--accent);
+      color: var(--bg-primary);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: opacity 0.15s ease;
+    }
+    .btn-accent:hover { opacity: 0.9; }
+
+    /* ── Calendar Section ── */
+    .calendar-section {
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .calendar-toggle {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-primary);
+      transition: background-color 0.15s ease;
+    }
+    .calendar-toggle:hover { background: rgba(42,42,42,0.5); }
+    .calendar-toggle-left  { display: flex; align-items: center; gap: 12px; }
+    .calendar-toggle-left h2 { font-size: 1.125rem; font-weight: 600; color: var(--text-primary); }
+    .calendar-summary { font-size: 0.875rem; color: var(--text-tertiary); margin-left: 8px; }
+    .chevron-icon     { color: var(--text-tertiary); }
+
+    .calendar-body { padding: 0 24px 24px; }
+
+    /* Legend */
+    .legend { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; font-size: 0.75rem; color: var(--text-tertiary); }
+    .legend-squares { display: flex; gap: 4px; }
+    .legend-sq { width: 12px; height: 12px; border-radius: 2px; }
+
+    /* Month Grid */
+    .month-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+    @media (min-width: 640px)  { .month-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 1024px) { .month-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 1280px) { .month-grid { grid-template-columns: repeat(4, 1fr); } }
+
+    .month-card {
+      background: rgba(0,0,0,0.5);
+      border-radius: 8px;
+      padding: 16px;
+      border: 1px solid rgba(51,51,51,0.5);
+    }
+    .month-label { font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; }
+
+    .day-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
+    }
+    .weekday-hdr {
+      font-size: 10px;
+      color: var(--text-tertiary);
+      text-align: center;
+      font-weight: 500;
+      padding-bottom: 3px;
+    }
+    .day-cell {
+      aspect-ratio: 1;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 500;
+      transition: transform 0.15s ease, outline 0.1s ease;
+      cursor: default;
+    }
+    .day-cell.empty   { background: transparent; visibility: hidden; }
+    .day-cell.no-data { background: transparent; color: rgba(128,128,128,0.3); }
+    .day-cell.heat-bg { background: var(--bg-tertiary); color: var(--text-tertiary); cursor: pointer; }
+    .day-cell.heat-1  { background: rgba(255,252,0,0.25); color: var(--text-primary); cursor: pointer; }
+    .day-cell.heat-2  { background: rgba(255,252,0,0.5);  color: var(--text-primary); cursor: pointer; }
+    .day-cell.heat-3  { background: rgba(255,252,0,0.8);  color: #000; cursor: pointer; }
+    .day-cell.heat-4  { background: var(--accent); color: #000; box-shadow: 0 0 8px rgba(255,252,0,0.4); cursor: pointer; }
+    .day-cell.has-data:hover { transform: scale(1.1); outline: 1px solid var(--accent); }
+
+    /* ── Quick Actions ── */
+    .quick-actions {
+      margin-top: 32px;
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-secondary {
+      padding: 12px 24px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: background-color 0.15s ease;
+    }
+    .btn-secondary:hover { background: var(--bg-tertiary); }
+  </style>
+</head>
+<body>
+
+  <!-- ════ Header ════ -->
+  <div class="header">
+    <div class="header-inner">
+      <h1>Snapchat Archive Dashboard</h1>
+      <p>Archive for your_username</p>
+    </div>
+  </div>
+
+  <!-- ════ Main ════ -->
+  <div class="main">
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+
+      <!-- Days -->
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8"  y1="2" x2="8"  y2="6"/>
+            <line x1="3"  y1="10" x2="21" y2="10"/>
+          </svg>
+          <span class="stat-label">DAYS</span>
+        </div>
+        <div class="stat-number">—</div>
+        <div class="stat-subtitle">No data loaded</div>
+      </div>
+
+      <!-- Conversations -->
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span class="stat-label">CONVERSATIONS</span>
+        </div>
+        <div class="stat-number">—</div>
+        <div class="stat-subtitle">Unique conversations</div>
+      </div>
+
+      <!-- Messages -->
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span class="stat-label">MESSAGES</span>
+        </div>
+        <div class="stat-number">—</div>
+        <div class="stat-subtitle">Total messages sent &amp; received</div>
+      </div>
+
+      <!-- Media -->
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          <span class="stat-label">MEDIA</span>
+        </div>
+        <div class="stat-number">—</div>
+        <div class="stat-subtitle">— images • — videos • — audio</div>
+      </div>
+
+    </div><!-- /stats-grid -->
+
+    <!-- Most Active Day -->
+    <div class="active-day-card">
+      <div class="active-day-card-header">
+        <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+          <polyline points="17 6 23 6 23 12"/>
+        </svg>
+        <h2>Most Active Day</h2>
+      </div>
+      <div class="active-day-body">
+        <div>
+          <div class="active-day-date">—</div>
+          <div class="active-day-count">— messages</div>
+        </div>
+        <button class="btn-accent">View Day</button>
+      </div>
+    </div>
+
+    <!-- Activity Calendar -->
+    <div class="calendar-section">
+      <button class="calendar-toggle" onclick="toggleCalendar()">
+        <div class="calendar-toggle-left">
+          <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8"  y1="2" x2="8"  y2="6"/>
+            <line x1="3"  y1="10" x2="21" y2="10"/>
+          </svg>
+          <h2>Activity Calendar</h2>
+          <span class="calendar-summary" id="calSummary"></span>
+        </div>
+        <svg class="chevron-icon" id="chevronIcon" width="18" height="18" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="18 15 12 9 6 15"/>
+        </svg>
+      </button>
+
+      <div id="calendarBody" class="calendar-body">
+        <!-- Legend -->
+        <div class="legend">
+          <span>Less</span>
+          <div class="legend-squares">
+            <div class="legend-sq" style="background:var(--bg-tertiary)"></div>
+            <div class="legend-sq" style="background:rgba(255,252,0,0.25)"></div>
+            <div class="legend-sq" style="background:rgba(255,252,0,0.5)"></div>
+            <div class="legend-sq" style="background:rgba(255,252,0,0.8)"></div>
+            <div class="legend-sq" style="background:var(--accent)"></div>
+          </div>
+          <span>More</span>
+        </div>
+        <!-- Month grid injected by JS -->
+        <div class="month-grid" id="monthGrid"></div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <button class="btn-secondary">Go to First Day</button>
+      <button class="btn-secondary">Go to Last Day</button>
+    </div>
+
+  </div><!-- /main -->
+
+  <script>
+  const DASHBOARD_DATA = /*DASHBOARD_DATA*/null;
+
+  const D = DASHBOARD_DATA;
+  const S = D.stats;
+
+  /* ── Stat cards (order: DAYS [0], CONVERSATIONS [1], MESSAGES [2], MEDIA [3]) ── */
+  const cards = document.querySelectorAll('.stat-card');
+
+  cards[0].querySelector('.stat-number').textContent = S.days.toLocaleString();
+  cards[0].querySelector('.stat-subtitle').textContent = 'Days with messages';
+
+  cards[1].querySelector('.stat-number').textContent = S.conversations.toLocaleString();
+  cards[1].querySelector('.stat-subtitle').textContent = 'Unique conversations';
+
+  cards[2].querySelector('.stat-number').textContent = S.messages.toLocaleString();
+  cards[2].querySelector('.stat-subtitle').textContent = 'Total messages sent \u0026 received';
+
+  cards[3].querySelector('.stat-number').textContent = S.media.total.toLocaleString();
+  cards[3].querySelector('.stat-subtitle').textContent =
+    S.media.images.toLocaleString() + ' images \u2022 ' +
+    S.media.videos.toLocaleString() + ' videos \u2022 ' +
+    S.media.audio.toLocaleString() + ' audio';
+
+  /* ── Most Active Day ── */
+  const mad = D.mostActiveDay;
+  document.querySelector('.active-day-date').textContent  = mad.date  || '\u2014';
+  document.querySelector('.active-day-count').textContent =
+    mad.count ? mad.count.toLocaleString() + ' messages' : '\u2014';
+  document.querySelector('.btn-accent').onclick = function () {
+    if (mad.date) window.location.href = 'days/' +mad.date + '/index.html';
+  };
+
+  /* ── Quick Actions ── */
+  const btns = document.querySelectorAll('.btn-secondary');
+  btns[0].textContent = D.firstDay ? 'Go to First Day (' + D.firstDay + ')' : 'Go to First Day';
+  btns[0].onclick = function () {
+    if (D.firstDay) window.location.href = 'days/' +D.firstDay + '/index.html';
+  };
+  btns[1].textContent = D.lastDay ? 'Go to Last Day (' + D.lastDay + ')' : 'Go to Last Day';
+  btns[1].onclick = function () {
+    if (D.lastDay) window.location.href = 'days/' +D.lastDay + '/index.html';
+  };
+
+  /* ── Heatmap helpers ── */
+  const activityValues = Object.values(D.activityData)
+    .filter(function (v) { return v > 0; })
+    .sort(function (a, b) { return a - b; });
+
+  function percentile(arr, p) {
+    if (!arr.length) return 0;
+    const idx = Math.floor(arr.length * p / 100);
+    return arr[Math.min(idx, arr.length - 1)];
+  }
+
+  const q1 = percentile(activityValues, 25);
+  const q2 = percentile(activityValues, 50);
+  const q3 = percentile(activityValues, 75);
+  const q4 = percentile(activityValues, 90);
+
+  function heatClass(count) {
+    if (!count)       return 'no-data';
+    if (count <= q1)  return 'heat-bg has-data';
+    if (count <= q2)  return 'heat-1 has-data';
+    if (count <= q3)  return 'heat-2 has-data';
+    if (count <= q4)  return 'heat-3 has-data';
+    return 'heat-4 has-data';
+  }
+
+  /* ── Build month grid ── */
+  const WEEKDAYS = ['S','M','T','W','T','F','S'];
+  const startDate = D.firstDay ? new Date(D.firstDay + 'T00:00:00') : new Date();
+  const endDate   = D.lastDay  ? new Date(D.lastDay  + 'T00:00:00') : new Date();
+
+  const months = [];
+  for (
+    const cur = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    cur <= new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+    cur.setMonth(cur.getMonth() + 1)
+  ) {
+    const year      = cur.getFullYear();
+    const month     = cur.getMonth();
+    const startDow  = cur.getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const label     = cur.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    months.push({ label, year, month, startDow, totalDays });
+  }
+
+  const activeDays = Object.keys(D.activityData).length;
+  document.getElementById('calSummary').textContent =
+    activeDays + ' active ' + (activeDays === 1 ? 'day' : 'days') + ' across ' + months.length + ' months';
+
+  /* ── Render months ── */
+  const grid = document.getElementById('monthGrid');
+
+  months.forEach(function ({ label, year, month, startDow, totalDays }) {
+    const card = document.createElement('div');
+    card.className = 'month-card';
+
+    const lbl = document.createElement('div');
+    lbl.className = 'month-label';
+    lbl.textContent = label;
+    card.appendChild(lbl);
+
+    const dayGrid = document.createElement('div');
+    dayGrid.className = 'day-grid';
+
+    WEEKDAYS.forEach(function (w) {
+      const h = document.createElement('div');
+      h.className = 'weekday-hdr';
+      h.textContent = w;
+      dayGrid.appendChild(h);
+    });
+
+    for (let i = 0; i < startDow; i++) {
+      const e = document.createElement('div');
+      e.className = 'day-cell empty';
+      dayGrid.appendChild(e);
+    }
+
+    for (let d = 1; d <= totalDays; d++) {
+      const dateStr = year + '-' +
+        String(month + 1).padStart(2, '0') + '-' +
+        String(d).padStart(2, '0');
+      const count = D.activityData[dateStr] || 0;
+      const cell  = document.createElement('div');
+      cell.className = 'day-cell ' + heatClass(count);
+      cell.textContent = d;
+      cell.title = dateStr + ': ' + count + ' message' + (count === 1 ? '' : 's');
+      if (count > 0) {
+        cell.onclick = (function (ds) {
+          return function () { window.location.href = 'days/' +ds + '/index.html'; };
+        }(dateStr));
+      }
+      dayGrid.appendChild(cell);
+    }
+
+    card.appendChild(dayGrid);
+    grid.appendChild(card);
+  });
+
+  /* ── Calendar toggle ── */
+  let expanded = true;
+  function toggleCalendar() {
+    expanded = !expanded;
+    document.getElementById('calendarBody').style.display = expanded ? '' : 'none';
+    document.getElementById('chevronIcon').innerHTML = expanded
+      ? '<polyline points="18 15 12 9 6 15"/>'
+      : '<polyline points="6 9 12 15 18 9"/>';
+  }
+  </script>
+</body>
+</html>
